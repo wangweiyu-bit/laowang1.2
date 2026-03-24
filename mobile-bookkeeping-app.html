@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>马卡龙记账 App</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --accent:#7c6cff;
+      --bg:#f6f7ff;
+      --bg2:#eef1ff;
+      --card:#ffffff;
+      --text:#1d2433;
+      --muted:#6e7687;
+      --line:#e8eaf5;
+      --danger:#ff5e7a;
+      --ok:#2ac769;
+      --shadow:0 8px 24px rgba(20,24,40,.08);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+    body.dark{
+      --bg:#0c1220;
+      --bg2:#0f1628;
+      --card:#121b2f;
+      --text:#e9efff;
+      --muted:#95a0b8;
+      --line:#24304a;
+      --shadow:0 8px 28px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg,var(--bg),var(--bg2));
+      color:var(--text);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .app{
+      width:100%;
+      max-width:430px;
+      margin:0 auto;
+      min-height:100vh;
+      padding:calc(8px + var(--safe-top)) 12px calc(110px + var(--safe-bottom));
+      position:relative;
+      overflow:hidden;
+    }
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-bottom:10px;
+    }
+    .head-text{min-width:0;flex:1}
+    .title{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .icon-btn{
+      border:1px solid var(--line);
+      background:var(--card);
+      border-radius:12px;
+      width:40px;height:40px;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      color:var(--text);
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      box-shadow:var(--shadow);
+      margin-bottom:10px;
+    }
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .col{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+    label{font-size:12px;color:var(--muted);font-weight:700}
+    input,select,textarea{
+      width:100%;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      min-width:0;
+    }
+    .amount{
+      font-size:40px;
+      font-weight:900;
+      text-align:right;
+      letter-spacing:.4px;
+    }
+    .seg{display:flex;gap:8px}
+    .seg button{
+      flex:1;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:transparent;
+      cursor:pointer;
+      color:var(--muted);
+      font-weight:800;
+      transition:all .2s ease;
+    }
+    .seg button.active{
+      color:var(--text);
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%, transparent);
+      transform:translateY(-1px);
+    }
+    .primary{
+      width:100%;
+      padding:12px;
+      border:0;
+      border-radius:14px;
+      font-weight:900;
+      color:#fff;
+      background:linear-gradient(135deg,var(--accent),#ffa1cf);
+      cursor:pointer;
+    }
+    .chips{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
+    .chip{
+      border:1px solid var(--line);
+      background:transparent;
+      border-radius:999px;
+      padding:8px 12px;
+      white-space:nowrap;
+      cursor:pointer;
+      font-size:12px;
+      font-weight:700;
+      color:var(--text);
+    }
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:8px;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius:14px;
+    }
+    .item .left{min-width:0;flex:1}
+    .item .name{font-weight:800}
+    .item .meta{
+      font-size:12px;color:var(--muted);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      max-width:240px;
+    }
+    .money.income{color:var(--ok);font-weight:900}
+    .money.expense{color:var(--danger);font-weight:900}
+    .mini{font-size:12px;color:var(--muted);font-weight:700}
+    .btn{
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:transparent;
+      cursor:pointer;
+      color:var(--text);
+      font-weight:700;
+    }
+    .btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%, var(--line))}
+    .tabs{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:0;
+      max-width:430px;
+      width:100%;
+      border-top:1px solid var(--line);
+      display:flex;
+      padding:6px 8px calc(8px + var(--safe-bottom));
+      backdrop-filter: blur(12px);
+      background:color-mix(in srgb,var(--card) 85%, transparent);
+      z-index:20;
+    }
+    .tab{
+      flex:1;border:0;background:transparent;padding:10px 0 8px;cursor:pointer;
+      color:var(--muted);font-weight:800;font-size:13px;border-radius:12px;
+      transition:all .2s ease;
+    }
+    .tab.active{
+      color:var(--text);
+      background:color-mix(in srgb,var(--accent) 12%, transparent);
+      transform:translateY(-2px);
+    }
+    .page{
+      display:none;
+      animation:pageIn .22s ease;
+    }
+    .page.active{display:block}
+    @keyframes pageIn{from{opacity:.3;transform:translateY(8px)}to{opacity:1;transform:none}}
+    .fab{
+      position:fixed;
+      right:calc((100vw - min(430px,100vw))/2 + 14px);
+      bottom:calc(92px + var(--safe-bottom));
+      width:54px;height:54px;border-radius:18px;border:0;color:#fff;font-size:30px;
+      background:linear-gradient(135deg,var(--accent),#ffa1cf);
+      cursor:pointer;box-shadow:var(--shadow);z-index:21;
+    }
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .chart-box{height:220px}
+    .search{display:flex;gap:8px}
+    .search input{flex:1}
+    .modal-mask{
+      position:fixed;inset:0;background:rgba(0,0,0,.35);
+      display:none;align-items:flex-end;justify-content:center;padding:12px;z-index:30;
+    }
+    .modal-mask.show{display:flex}
+    .modal{
+      width:min(430px,100%);
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      max-height:86vh;
+      overflow:auto;
+    }
+    .modal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .hint{text-align:center;font-size:12px;color:var(--muted);padding:8px 0}
+    .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+    .stat{
+      border:1px solid var(--line);border-radius:12px;padding:8px;
+      background:color-mix(in srgb,var(--card) 92%, transparent);
+    }
+    .stat .k{font-size:11px;color:var(--muted)}
+    .stat .v{font-size:14px;font-weight:900}
+    @media (max-width:390px){
+      .grid2{grid-template-columns:1fr}
+      .amount{font-size:34px}
+      .item .meta{max-width:180px}
+      .tab{font-size:12px}
+      .search{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="head-text">
+        <div class="title" id="appTitle">马卡龙记账</div>
+        <div class="sub" id="appSubtitle">本地存储 · 无后端</div>
+      </div>
+      <div class="row" style="flex-wrap:nowrap">
+        <button class="icon-btn" id="btnAnalysis">📊</button>
+        <button class="icon-btn" id="btnTheme">🎨</button>
+      </div>
+    </div>
+
+    <section id="page-record" class="page active">
+      <div class="card">
+        <div class="seg">
+          <button id="typeExpense" class="active">支出</button>
+          <button id="typeIncome">收入</button>
+        </div>
+        <div style="height:8px"></div>
+        <input id="amount" class="amount" type="number" step="0.01" placeholder="0.00" />
+        <div class="grid2">
+          <div class="col">
+            <label>标签</label>
+            <select id="tagSelect"></select>
+          </div>
+          <div class="col">
+            <label>小分类</label>
+            <select id="subTagSelect"></select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="col">
+            <label>账户</label>
+            <select id="assetSelect"></select>
+          </div>
+          <div class="col">
+            <label>日期</label>
+            <input id="dateInput" type="date" />
+          </div>
+        </div>
+        <div class="col">
+          <label>备注</label>
+          <input id="noteInput" maxlength="60" placeholder="可选备注" />
+        </div>
+        <div style="height:8px"></div>
+        <div class="row" style="justify-content:space-between">
+          <div class="mini">快速模板</div>
+          <button class="btn" id="addTemplateBtn">+ 新增模板</button>
+        </div>
+        <div id="tpls" class="chips"></div>
+        <div style="height:10px"></div>
+        <button class="primary" id="saveBill">保存记账</button>
+      </div>
+
+      <div class="card">
+        <div class="mini">最近记录</div>
+        <div class="search">
+          <input id="searchBill" placeholder="搜索：标签/小分类/备注/日期" />
+          <button class="btn" id="clearSearch">清空</button>
+        </div>
+        <div style="height:8px"></div>
+        <div id="billList" class="list"></div>
+        <div id="billEmpty" class="hint">暂无记录</div>
+      </div>
+    </section>
+
+    <section id="page-assets" class="page">
+      <div class="card">
+        <div class="mini">总资产</div>
+        <div id="assetTotal" style="font-size:28px;font-weight:900">¥0.00</div>
+        <div class="row">
+          <button class="btn" id="addAsset">+ 添加资产</button>
+          <button class="btn" id="transferBtn">资产转账</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="mini">资产列表（可编辑）</div>
+        <div id="assetList" class="list"></div>
+      </div>
+      <div class="card">
+        <div class="mini">资产占比</div>
+        <div class="chart-box"><canvas id="assetPie"></canvas></div>
+      </div>
+    </section>
+
+    <section id="page-items" class="page">
+      <div class="card">
+        <div class="mini">物品总资产</div>
+        <div id="itemTotal" style="font-size:28px;font-weight:900">¥0.00</div>
+        <button class="btn" id="addItem">+ 新增物品</button>
+      </div>
+      <div class="card">
+        <div class="mini">物品列表</div>
+        <div id="itemList" class="list"></div>
+        <div id="itemEmpty" class="hint">暂无物品</div>
+      </div>
+    </section>
+
+    <section id="page-me" class="page">
+      <div class="card">
+        <div class="mini">应用信息（可自定义）</div>
+        <div class="col">
+          <label>标题</label>
+          <input id="titleInput" maxlength="20" />
+          <label>副标题</label>
+          <input id="subtitleInput" maxlength="30" />
+          <button class="btn" id="saveBrand">保存标题</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="mini">主题</div>
+        <div class="row">
+          <input type="color" id="accentInput" />
+          <button class="btn" id="toggleDark">深色模式</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="mini">标签管理（含小分类）</div>
+        <div class="row">
+          <button class="btn" id="addTag">+ 标签</button>
+          <button class="btn" id="pinTag">常用置顶</button>
+        </div>
+        <div style="height:8px"></div>
+        <div id="tagList" class="list"></div>
+      </div>
+      <div class="card">
+        <div class="mini">资产类型管理</div>
+        <button class="btn" id="addAssetType">+ 资产类型</button>
+        <div style="height:8px"></div>
+        <div id="assetTypeList" class="list"></div>
+      </div>
+      <div class="card">
+        <div class="mini">数据</div>
+        <div class="row">
+          <button class="btn" id="exportJson">导出JSON</button>
+          <button class="btn" id="importJson">导入JSON</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="exportCsv">导出Excel(CSV)</button>
+          <button class="btn danger" id="clearAll">清空数据</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <button class="fab" id="fab">+</button>
+
+  <nav class="tabs">
+    <button class="tab active" data-page="record">记账</button>
+    <button class="tab" data-page="assets">资产</button>
+    <button class="tab" data-page="items">物品</button>
+    <button class="tab" data-page="me">我的</button>
+  </nav>
+
+  <input id="jsonFile" type="file" accept="application/json" style="display:none" />
+  <div class="modal-mask" id="modalMask">
+    <div class="modal">
+      <div class="modal-top">
+        <strong id="mTitle">标题</strong>
+        <button class="btn" id="mClose">关闭</button>
+      </div>
+      <div id="mBody"></div>
+      <div style="height:8px"></div>
+      <div class="row" id="mFooter"></div>
+    </div>
+  </div>
+
+  <script>
+    const KEY = "macaron-bookkeeper-v2";
+    const $ = (s,p=document)=>p.querySelector(s);
+    const $$ = (s,p=document)=>[...p.querySelectorAll(s)];
+    const today = ()=>new Date().toISOString().slice(0,10);
+    const id = ()=>crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    const money = n=>"¥"+Number(n||0).toFixed(2);
+    const sum = arr=>arr.reduce((a,b)=>a+b,0);
+
+    let chartAsset, chartTrend, chartPie, chartBar;
+    const defaultData = ()=>({
+      brand:{ title:"马卡龙记账", subtitle:"本地存储 · 无后端" },
+      theme:{ accent:"#7c6cff", dark:false },
+      ui:{ type:"expense", page:"record" },
+      tags:[
+        {id:id(),name:"餐饮",color:"#ff7fa4",pinned:true,subs:["午饭","奶茶","面包"]},
+        {id:id(),name:"交通",color:"#6aa8ff",pinned:true,subs:["公交","地铁","打车"]},
+        {id:id(),name:"工资",color:"#43d17f",pinned:true,subs:["正常工资","奖金"]},
+        {id:id(),name:"购物",color:"#f7b84f",pinned:false,subs:["服装","饮食","日用品"]}
+      ],
+      assetTypes:[
+        {id:id(),name:"微信",color:"#7c6cff"},
+        {id:id(),name:"支付宝",color:"#4cc9f0"},
+        {id:id(),name:"银行卡",color:"#57cc99"},
+        {id:id(),name:"股票",color:"#f7b267"},
+        {id:id(),name:"公积金",color:"#ff8fab"}
+      ],
+      assets:[],
+      bills:[],
+      transfers:[],
+      templates:[],
+      items:[]
+    });
+
+    let db = load();
+    function load(){
+      try{
+        const d = JSON.parse(localStorage.getItem(KEY)||"null");
+        if(!d) return seed(defaultData());
+        if(!d.brand) d.brand = { title:"马卡龙记账", subtitle:"本地存储 · 无后端" };
+        return d;
+      }catch{ return seed(defaultData()); }
+    }
+    function save(data=db){ localStorage.setItem(KEY, JSON.stringify(data)); }
+    function seed(d){
+      d.assets = [
+        {id:id(),name:"微信钱包",typeName:"微信",initial:1200},
+        {id:id(),name:"支付宝余额",typeName:"支付宝",initial:800},
+        {id:id(),name:"银行卡主卡",typeName:"银行卡",initial:5000}
+      ];
+      d.templates = [
+        {id:id(),name:"午餐模板",type:"expense",amount:28,tagId:d.tags[0].id,sub:"午饭"},
+        {id:id(),name:"地铁模板",type:"expense",amount:6,tagId:d.tags[1].id,sub:"地铁"},
+        {id:id(),name:"工资模板",type:"income",amount:10000,tagId:d.tags[2].id,sub:"正常工资"}
+      ];
+      save(d); return d;
+    }
+
+    function applyTheme(){
+      document.documentElement.style.setProperty("--accent", db.theme.accent || "#7c6cff");
+      document.body.classList.toggle("dark", !!db.theme.dark);
+      $("#accentInput").value = db.theme.accent || "#7c6cff";
+      $("#appTitle").textContent = db.brand?.title || "马卡龙记账";
+      $("#appSubtitle").textContent = db.brand?.subtitle || "本地存储 · 无后端";
+      $("#titleInput").value = db.brand?.title || "";
+      $("#subtitleInput").value = db.brand?.subtitle || "";
+    }
+
+    function assetBalance(assetId){
+      const a = db.assets.find(x=>x.id===assetId);
+      if(!a) return 0;
+      let bal = Number(a.initial||0);
+      db.bills.forEach(b=>{
+        if(b.assetId !== assetId) return;
+        bal += b.type==="income" ? Number(b.amount) : -Number(b.amount);
+      });
+      db.transfers.forEach(t=>{
+        if(t.from===assetId) bal -= Number(t.amount);
+        if(t.to===assetId) bal += Number(t.amount);
+      });
+      return bal;
+    }
+    function assetFlowEffect(assetId){
+      // Net effect from bills + transfers, excluding initial value.
+      let effect = 0;
+      db.bills.forEach(b=>{
+        if(b.assetId !== assetId) return;
+        effect += b.type==="income" ? Number(b.amount) : -Number(b.amount);
+      });
+      db.transfers.forEach(t=>{
+        if(t.from===assetId) effect -= Number(t.amount);
+        if(t.to===assetId) effect += Number(t.amount);
+      });
+      return effect;
+    }
+
+    function openModal(title, html, btns=[]){
+      $("#mTitle").textContent = title;
+      $("#mBody").innerHTML = html;
+      $("#mFooter").innerHTML = "";
+      btns.forEach(b=>{
+        const el = document.createElement("button");
+        el.className = "btn"+(b.danger?" danger":"");
+        el.textContent = b.text;
+        el.onclick = b.onClick;
+        $("#mFooter").appendChild(el);
+      });
+      $("#modalMask").classList.add("show");
+    }
+    function closeModal(){ $("#modalMask").classList.remove("show"); }
+    $("#mClose").onclick = closeModal;
+    $("#modalMask").addEventListener("click",e=>{ if(e.target.id==="modalMask") closeModal(); });
+
+    function switchPage(p){
+      db.ui.page = p; save();
+      $$(".page").forEach(x=>x.classList.toggle("active", x.id==="page-"+p));
+      $$(".tab").forEach(x=>x.classList.toggle("active", x.dataset.page===p));
+      render();
+    }
+    $$(".tab").forEach(t=>t.onclick=()=>switchPage(t.dataset.page));
+
+    function tagName(tagId){ return (db.tags.find(t=>t.id===tagId)||{}).name || "未分类"; }
+    function tagObj(tagId){ return db.tags.find(t=>t.id===tagId); }
+
+    function renderTagAssetSelects(){
+      const tags = [...db.tags].sort((a,b)=>Number(b.pinned)-Number(a.pinned));
+      $("#tagSelect").innerHTML = tags.map(t=>`<option value="${t.id}">${t.name}</option>`).join("");
+      if(!$("#tagSelect").value && tags.length) $("#tagSelect").value = tags[0].id;
+      renderSubTagSelect();
+      $("#assetSelect").innerHTML = db.assets.map(a=>`<option value="${a.id}">${a.name}（${money(assetBalance(a.id))}）</option>`).join("");
+      if(!$("#dateInput").value) $("#dateInput").value = today();
+    }
+    function renderSubTagSelect(selected){
+      const t = tagObj($("#tagSelect").value);
+      const subs = t?.subs?.length ? t.subs : ["默认"];
+      $("#subTagSelect").innerHTML = subs.map(s=>`<option value="${s}">${s}</option>`).join("");
+      if(selected && subs.includes(selected)) $("#subTagSelect").value = selected;
+    }
+    $("#tagSelect").addEventListener("change", ()=>renderSubTagSelect());
+
+    function renderTemplates(){
+      const list = db.templates.filter(t=>t.type===db.ui.type);
+      $("#tpls").innerHTML = list.length
+        ? list.map(t=>`<button class="chip" data-tpl="${t.id}">${t.name}</button>`).join("")
+        : `<span class="mini">暂无模板</span>`;
+      $$("#tpls .chip").forEach(c=>{
+        c.onclick=()=>{
+          const t = db.templates.find(x=>x.id===c.dataset.tpl);
+          if(!t) return;
+          $("#amount").value = t.amount;
+          $("#tagSelect").value = t.tagId;
+          renderSubTagSelect(t.sub);
+        };
+      });
+    }
+
+    function renderBills(){
+      const q = ($("#searchBill").value||"").toLowerCase().trim();
+      const list = [...db.bills].sort((a,b)=>(b.date+b.id).localeCompare(a.date+a.id))
+        .filter(b=>{
+          if(!q) return true;
+          const s = `${b.date} ${tagName(b.tagId)} ${b.sub||""} ${b.note||""}`.toLowerCase();
+          return s.includes(q);
+        }).slice(0,40);
+      $("#billList").innerHTML = list.map(b=>{
+        const asset = db.assets.find(a=>a.id===b.assetId);
+        return `<div class="item">
+          <div class="left">
+            <div class="name">${tagName(b.tagId)} · ${b.sub||"默认"}</div>
+            <div class="meta">${b.date} · ${(asset||{}).name||"未知账户"} · ${b.note||"无备注"}</div>
+          </div>
+          <div>
+            <div class="money ${b.type}">${b.type==="income"?"+":"-"}${money(b.amount)}</div>
+            <div class="row">
+              <button class="btn" data-edit="${b.id}">编辑</button>
+              <button class="btn danger" data-del="${b.id}">删</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+      $("#billEmpty").style.display = list.length ? "none":"block";
+      $$("#billList [data-del]").forEach(btn=>btn.onclick=()=>{
+        db.bills = db.bills.filter(x=>x.id!==btn.dataset.del); save(); render();
+      });
+      $$("#billList [data-edit]").forEach(btn=>btn.onclick=()=>editBill(btn.dataset.edit));
+    }
+
+    function editBill(billId){
+      const b = db.bills.find(x=>x.id===billId); if(!b) return;
+      const tag = tagObj(b.tagId);
+      const subOpts = (tag?.subs||["默认"]).map(s=>`<option ${s===b.sub?"selected":""}>${s}</option>`).join("");
+      openModal("编辑账单", `
+        <div class="col">
+          <label>金额</label><input id="eAmount" type="number" value="${b.amount}" />
+          <label>小分类</label><select id="eSub">${subOpts}</select>
+          <label>备注</label><input id="eNote" value="${b.note||""}" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          b.amount = Number($("#eAmount").value||0);
+          b.sub = $("#eSub").value || b.sub;
+          b.note = $("#eNote").value||"";
+          save(); closeModal(); render();
+        }}
+      ]);
+    }
+
+    function renderAssets(){
+      const total = db.assets.reduce((s,a)=>s+assetBalance(a.id),0);
+      $("#assetTotal").textContent = money(total);
+      $("#assetList").innerHTML = db.assets.map(a=>`
+        <div class="item">
+          <div class="left">
+            <div class="name">${a.name}</div>
+            <div class="meta">${a.typeName}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:900">${money(assetBalance(a.id))}</div>
+            <div class="row">
+              <button class="btn" data-edita="${a.id}">编辑</button>
+              <button class="btn danger" data-dela="${a.id}">删除</button>
+            </div>
+          </div>
+        </div>
+      `).join("") || `<div class="hint">暂无资产</div>`;
+
+      $$("#assetList [data-dela]").forEach(b=>b.onclick=()=>{
+        db.assets = db.assets.filter(x=>x.id!==b.dataset.dela); save(); render();
+      });
+      $$("#assetList [data-edita]").forEach(b=>b.onclick=()=>editAsset(b.dataset.edita));
+
+      if(chartAsset) chartAsset.destroy();
+      const vals = db.assets.map(a=>assetBalance(a.id));
+      chartAsset = new Chart($("#assetPie"),{
+        type:"doughnut",
+        data:{
+          labels:db.assets.map(a=>a.name),
+          datasets:[{
+            data:vals.length?vals:[1],
+            backgroundColor:db.assets.map(a=>{
+              const t = db.assetTypes.find(x=>x.name===a.typeName);
+              return (t||{}).color || db.theme.accent;
+            })
+          }]
+        },
+        options:{plugins:{legend:{position:"bottom"}}}
+      });
+    }
+    function editAsset(assetId){
+      const a = db.assets.find(x=>x.id===assetId); if(!a) return;
+      const currentVal = assetBalance(assetId);
+      openModal("编辑资产", `
+        <div class="col">
+          <label>名称</label><input id="eaName" value="${a.name}" />
+          <label>类型</label><select id="eaType">${db.assetTypes.map(t=>`<option ${t.name===a.typeName?"selected":""}>${t.name}</option>`).join("")}</select>
+          <label>当前余额</label><input id="eaCurrent" type="number" value="${currentVal}" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          a.name = $("#eaName").value.trim() || a.name;
+          a.typeName = $("#eaType").value;
+          // Keep history untouched; reverse-calc initial from target current value.
+          const targetCurrent = Number($("#eaCurrent").value||0);
+          const effect = assetFlowEffect(assetId);
+          a.initial = targetCurrent - effect;
+          save(); closeModal(); render();
+        }}
+      ]);
+    }
+
+    function currentItemValue(it){
+      if(it.override !== null && it.override !== "" && it.override !== undefined) return Number(it.override);
+      if(!it.dep) return Number(it.buyPrice);
+      const years = Number(it.depYears||0);
+      if(years<=0) return Number(it.buyPrice);
+      const days = (Date.now() - new Date(it.buyDate).getTime()) / 86400000;
+      const usedYears = days / 365;
+      return Math.max(0, Number(it.buyPrice) * (1 - usedYears/years));
+    }
+    function renderItems(){
+      const list = db.items || [];
+      const total = list.reduce((s,it)=>s+currentItemValue(it),0);
+      $("#itemTotal").textContent = money(total);
+      $("#itemList").innerHTML = list.map(it=>`
+        <div class="item">
+          <div class="left">
+            <div class="name">${it.name}</div>
+            <div class="meta">${it.category} · 购买${money(it.buyPrice)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:900">${money(currentItemValue(it))}</div>
+            <div class="row">
+              <button class="btn" data-editi="${it.id}">编辑</button>
+              <button class="btn danger" data-deli="${it.id}">删</button>
+            </div>
+          </div>
+        </div>
+      `).join("");
+      $("#itemEmpty").style.display = list.length ? "none":"block";
+      $$("#itemList [data-deli]").forEach(b=>b.onclick=()=>{
+        db.items = db.items.filter(x=>x.id!==b.dataset.deli); save(); render();
+      });
+      $$("#itemList [data-editi]").forEach(b=>b.onclick=()=>editItem(b.dataset.editi));
+    }
+    function editItem(itemId){
+      const it = db.items.find(x=>x.id===itemId); if(!it) return;
+      openModal("编辑物品", `
+        <div class="col">
+          <label>名称</label><input id="eiName" value="${it.name}" />
+          <label>当前价值覆盖(可空)</label><input id="eiOv" type="number" value="${it.override ?? ""}" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          it.name = $("#eiName").value || it.name;
+          const v = $("#eiOv").value;
+          it.override = v===""?null:Number(v);
+          save(); closeModal(); render();
+        }}
+      ]);
+    }
+
+    function renderTagManager(){
+      const count = {};
+      db.bills.forEach(b=>count[b.tagId]=(count[b.tagId]||0)+1);
+      const tags = [...db.tags].sort((a,b)=>Number(b.pinned)-Number(a.pinned));
+      $("#tagList").innerHTML = tags.map(t=>`
+        <div class="item">
+          <div class="left">
+            <div class="name">${t.name}</div>
+            <div class="meta">小分类：${(t.subs||[]).join("、")} · 使用 ${count[t.id]||0} 次 · ${t.pinned?"已置顶":"未置顶"}</div>
+          </div>
+          <div class="row">
+            <button class="btn" data-editt="${t.id}">编辑</button>
+            <button class="btn" data-pin="${t.id}">${t.pinned?"取消":"置顶"}</button>
+            <button class="btn danger" data-delt="${t.id}">删除</button>
+          </div>
+        </div>
+      `).join("");
+      $$("#tagList [data-editt]").forEach(b=>b.onclick=()=>editTag(b.dataset.editt));
+      $$("#tagList [data-pin]").forEach(b=>b.onclick=()=>{
+        const t = db.tags.find(x=>x.id===b.dataset.pin); if(t){t.pinned=!t.pinned;save();render();}
+      });
+      $$("#tagList [data-delt]").forEach(b=>b.onclick=()=>{
+        db.tags = db.tags.filter(x=>x.id!==b.dataset.delt); save(); render();
+      });
+    }
+    function editTag(tagId){
+      const t = db.tags.find(x=>x.id===tagId); if(!t) return;
+      openModal("编辑标签与小分类", `
+        <div class="col">
+          <label>标签名称</label><input id="etName" value="${t.name}" />
+          <label>颜色</label><input id="etColor" type="color" value="${t.color||db.theme.accent}" />
+          <label>小分类（用逗号分隔）</label><input id="etSubs" value="${(t.subs||[]).join(",")}" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          t.name = ($("#etName").value||"").trim() || t.name;
+          t.color = $("#etColor").value || t.color;
+          t.subs = ($("#etSubs").value||"").split(",").map(s=>s.trim()).filter(Boolean);
+          if(!t.subs.length) t.subs=["默认"];
+          save(); closeModal(); render();
+        }}
+      ]);
+    }
+
+    function renderAssetTypeManager(){
+      $("#assetTypeList").innerHTML = db.assetTypes.map(t=>`
+        <div class="item">
+          <div class="left">
+            <div class="name">${t.name}</div>
+            <div class="meta">颜色 ${t.color}</div>
+          </div>
+          <button class="btn danger" data-delat="${t.id}">删除</button>
+        </div>
+      `).join("");
+      $$("#assetTypeList [data-delat]").forEach(b=>b.onclick=()=>{
+        db.assetTypes = db.assetTypes.filter(x=>x.id!==b.dataset.delat); save(); render();
+      });
+    }
+
+    function getPeriodBills(mode){
+      const now = new Date();
+      const from = new Date(now);
+      if(mode==="day") from.setDate(now.getDate()-13);
+      if(mode==="week") from.setDate(now.getDate()-7*11);
+      if(mode==="month") from.setMonth(now.getMonth()-11);
+      return db.bills.filter(b=>new Date(b.date)>=from);
+    }
+    function periodKey(date, mode){
+      const d = new Date(date);
+      if(mode==="day") return date;
+      if(mode==="week"){
+        const day = d.getDay() || 7;
+        d.setDate(d.getDate() - day + 1);
+        return d.toISOString().slice(0,10);
+      }
+      return date.slice(0,7);
+    }
+    function compareRange(mode){
+      const now = new Date();
+      const curFrom = new Date(now);
+      const prevFrom = new Date(now);
+      const prevTo = new Date(now);
+      if(mode==="week"){
+        curFrom.setDate(now.getDate()-6);
+        prevTo.setDate(curFrom.getDate()-1);
+        prevFrom.setDate(prevTo.getDate()-6);
+      }else{
+        curFrom.setMonth(now.getMonth(),1);
+        prevTo.setDate(curFrom.getDate()-1);
+        prevFrom.setMonth(prevTo.getMonth(),1);
+      }
+      const inRange=(d,a,b)=>new Date(d)>=a && new Date(d)<=b;
+      const cur = db.bills.filter(b=>inRange(b.date,curFrom,now));
+      const prev = db.bills.filter(b=>inRange(b.date,prevFrom,prevTo));
+      return {cur,prev};
+    }
+
+    function openAnalysis(){
+      openModal("数据分析",`
+        <div class="row">
+          <button class="btn" id="aDay">日</button>
+          <button class="btn" id="aWeek">周</button>
+          <button class="btn" id="aMonth">月</button>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="k">本周汇总</div><div class="v" id="weekSum">-</div></div>
+          <div class="stat"><div class="k">本月汇总</div><div class="v" id="monthSum">-</div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat"><div class="k">周对比(本周-上周)</div><div class="v" id="weekCmp">-</div></div>
+          <div class="stat"><div class="k">月对比(本月-上月)</div><div class="v" id="monthCmp">-</div></div>
+        </div>
+        <div class="chart-box"><canvas id="trend"></canvas></div>
+        <div class="chart-box"><canvas id="pie"></canvas></div>
+        <div class="chart-box"><canvas id="bar"></canvas></div>
+      `,[{text:"关闭",onClick:closeModal}]);
+
+      const fillSummary=()=>{
+        const wk = compareRange("week");
+        const mk = compareRange("month");
+        const net = bills=>sum(bills.map(b=>b.type==="income"?Number(b.amount):-Number(b.amount)));
+        const wkCur = net(wk.cur), wkPrev = net(wk.prev);
+        const mkCur = net(mk.cur), mkPrev = net(mk.prev);
+        $("#weekSum").textContent = money(wkCur);
+        $("#monthSum").textContent = money(mkCur);
+        $("#weekCmp").textContent = money(wkCur - wkPrev);
+        $("#monthCmp").textContent = money(mkCur - mkPrev);
+      };
+
+      const draw=(mode)=>{
+        const bills = getPeriodBills(mode);
+        const map = {};
+        bills.forEach(b=>{
+          const k = periodKey(b.date, mode);
+          if(!map[k]) map[k]={inc:0,exp:0};
+          if(b.type==="income") map[k].inc += Number(b.amount);
+          else map[k].exp += Number(b.amount);
+        });
+        const labels = Object.keys(map).sort();
+        const inc = labels.map(k=>map[k].inc);
+        const exp = labels.map(k=>map[k].exp);
+
+        const pieMap={};
+        bills.forEach(b=>{
+          const key = `${tagName(b.tagId)}-${b.sub||"默认"}`;
+          pieMap[key]=(pieMap[key]||0)+Number(b.amount);
+        });
+        const pl = Object.keys(pieMap);
+        const pv = pl.map(k=>pieMap[k]);
+
+        if(chartTrend) chartTrend.destroy();
+        if(chartPie) chartPie.destroy();
+        if(chartBar) chartBar.destroy();
+        chartTrend = new Chart($("#trend"),{
+          type:"line",
+          data:{labels,datasets:[
+            {label:"收入",data:inc,borderColor:"#2ac769",tension:.35},
+            {label:"支出",data:exp,borderColor:"#ff5e7a",tension:.35}
+          ]}
+        });
+        chartPie = new Chart($("#pie"),{
+          type:"doughnut",
+          data:{labels:pl,datasets:[{data:pv,backgroundColor:pl.map((_,i)=>db.tags[i%db.tags.length]?.color||db.theme.accent)}]}
+        });
+        chartBar = new Chart($("#bar"),{
+          type:"bar",
+          data:{labels,datasets:[
+            {label:"收入",data:inc,backgroundColor:"rgba(42,199,105,.7)"},
+            {label:"支出",data:exp,backgroundColor:"rgba(255,94,122,.7)"}
+          ]}
+        });
+      };
+      fillSummary();
+      $("#aDay").onclick=()=>draw("day");
+      $("#aWeek").onclick=()=>draw("week");
+      $("#aMonth").onclick=()=>draw("month");
+      draw("month");
+    }
+
+    function render(){
+      applyTheme();
+      renderTagAssetSelects();
+      renderTemplates();
+      renderBills();
+      renderAssets();
+      renderItems();
+      renderTagManager();
+      renderAssetTypeManager();
+    }
+
+    $("#typeExpense").onclick=()=>{
+      db.ui.type="expense"; save();
+      $("#typeExpense").classList.add("active");
+      $("#typeIncome").classList.remove("active");
+      renderTemplates();
+    };
+    $("#typeIncome").onclick=()=>{
+      db.ui.type="income"; save();
+      $("#typeIncome").classList.add("active");
+      $("#typeExpense").classList.remove("active");
+      renderTemplates();
+    };
+    $("#saveBill").onclick=()=>{
+      const amount = Number($("#amount").value||0);
+      if(!(amount>0)) return alert("请输入正确金额");
+      db.bills.push({
+        id:id(), type:db.ui.type, amount,
+        tagId:$("#tagSelect").value,
+        sub:$("#subTagSelect").value || "默认",
+        assetId:$("#assetSelect").value,
+        date:$("#dateInput").value||today(),
+        note:$("#noteInput").value||""
+      });
+      save(); $("#amount").value=""; $("#noteInput").value="";
+      render();
+    };
+    $("#addTemplateBtn").onclick=()=>{
+      const amount = Number($("#amount").value||0);
+      if(!(amount>0)) return alert("先输入金额再新增模板");
+      const name = prompt("模板名称","新模板");
+      if(!name) return;
+      db.templates.push({
+        id:id(), name, type:db.ui.type, amount,
+        tagId:$("#tagSelect").value, sub:$("#subTagSelect").value||"默认"
+      });
+      save(); renderTemplates();
+    };
+    $("#clearSearch").onclick=()=>{ $("#searchBill").value=""; renderBills(); };
+    $("#searchBill").oninput=renderBills;
+    $("#fab").onclick=()=>switchPage("record");
+
+    $("#addAsset").onclick=()=>{
+      openModal("新增资产",`
+        <div class="col">
+          <label>名称</label><input id="naName" placeholder="如：微信钱包" />
+          <label>类型</label><select id="naType">${db.assetTypes.map(t=>`<option>${t.name}</option>`).join("")}</select>
+          <label>初始余额</label><input id="naInit" type="number" value="0" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          const name=$("#naName").value.trim();
+          if(!name) return alert("请输入名称");
+          db.assets.push({id:id(),name,typeName:$("#naType").value,initial:Number($("#naInit").value||0)});
+          save(); closeModal(); render();
+        }}
+      ]);
+    };
+    $("#transferBtn").onclick=()=>{
+      if(db.assets.length<2) return alert("至少两个资产");
+      openModal("资产转账",`
+        <div class="col">
+          <label>转出</label><select id="trFrom">${db.assets.map(a=>`<option value="${a.id}">${a.name}</option>`).join("")}</select>
+          <label>转入</label><select id="trTo">${db.assets.map(a=>`<option value="${a.id}">${a.name}</option>`).join("")}</select>
+          <label>金额</label><input id="trAmt" type="number" value="0" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"确认",onClick:()=>{
+          const from=$("#trFrom").value,to=$("#trTo").value,amt=Number($("#trAmt").value||0);
+          if(from===to) return alert("转出和转入不能相同");
+          if(!(amt>0)) return alert("金额错误");
+          if(assetBalance(from)<amt) return alert("余额不足");
+          db.transfers.push({id:id(),from,to,amount:amt,date:today()});
+          save(); closeModal(); render();
+        }}
+      ]);
+    };
+
+    $("#addItem").onclick=()=>{
+      openModal("新增物品",`
+        <div class="col">
+          <label>名称</label><input id="niName" />
+          <label>分类</label><input id="niCat" placeholder="如：数码" />
+          <label>购买价格</label><input id="niBuy" type="number" value="0" />
+          <label>购买日期</label><input id="niDate" type="date" value="${today()}" />
+          <label>折旧计算</label>
+          <select id="niDep"><option value="yes">是</option><option value="no">否</option></select>
+          <label>折旧年限</label><input id="niYears" type="number" value="4" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          const name=$("#niName").value.trim();
+          if(!name) return alert("名称必填");
+          db.items.push({
+            id:id(),name,category:$("#niCat").value||"未分类",buyPrice:Number($("#niBuy").value||0),
+            buyDate:$("#niDate").value||today(),dep:$("#niDep").value==="yes",depYears:Number($("#niYears").value||4),
+            override:null
+          });
+          save(); closeModal(); render();
+        }}
+      ]);
+    };
+
+    $("#addTag").onclick=()=>{
+      openModal("新增标签",`
+        <div class="col">
+          <label>标签名</label><input id="ntName" />
+          <label>颜色</label><input id="ntColor" type="color" value="${db.theme.accent}" />
+          <label>小分类（用逗号分隔）</label><input id="ntSubs" placeholder="如：午饭,奶茶,面包" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          const name=$("#ntName").value.trim();
+          if(!name) return alert("请输入标签名");
+          const subs = ($("#ntSubs").value||"").split(",").map(s=>s.trim()).filter(Boolean);
+          db.tags.push({id:id(),name,color:$("#ntColor").value,pinned:false,subs:subs.length?subs:["默认"]});
+          save(); closeModal(); render();
+        }}
+      ]);
+    };
+    $("#pinTag").onclick=()=>{
+      const cnt={}; db.bills.forEach(b=>cnt[b.tagId]=(cnt[b.tagId]||0)+1);
+      [...db.tags].sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0)).forEach((t,i)=>t.pinned=i<5);
+      save(); render();
+    };
+
+    $("#addAssetType").onclick=()=>{
+      openModal("新增资产类型",`
+        <div class="col">
+          <label>名称</label><input id="natName" />
+          <label>颜色</label><input id="natColor" type="color" value="${db.theme.accent}" />
+        </div>
+      `,[
+        {text:"取消",onClick:closeModal},
+        {text:"保存",onClick:()=>{
+          const name=$("#natName").value.trim();
+          if(!name) return alert("请输入名称");
+          db.assetTypes.push({id:id(),name,color:$("#natColor").value});
+          save(); closeModal(); render();
+        }}
+      ]);
+    };
+
+    $("#accentInput").onchange=()=>{ db.theme.accent=$("#accentInput").value; save(); render(); };
+    $("#toggleDark").onclick=()=>{ db.theme.dark=!db.theme.dark; save(); render(); };
+    $("#btnTheme").onclick=()=>switchPage("me");
+    $("#saveBrand").onclick=()=>{
+      db.brand.title = ($("#titleInput").value||"").trim() || "马卡龙记账";
+      db.brand.subtitle = ($("#subtitleInput").value||"").trim() || "本地存储 · 无后端";
+      save(); applyTheme();
+    };
+
+    $("#exportJson").onclick=()=>{
+      const blob = new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob); a.download="记账数据.json"; a.click();
+      URL.revokeObjectURL(a.href);
+    };
+    $("#importJson").onclick=()=>$("#jsonFile").click();
+    $("#jsonFile").onchange=e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const fr=new FileReader();
+      fr.onload=()=>{
+        try{
+          db=JSON.parse(fr.result);
+          if(!db.brand) db.brand={title:"马卡龙记账",subtitle:"本地存储 · 无后端"};
+          save(); render();
+          alert("导入成功");
+        }catch{
+          alert("导入失败，JSON格式错误");
+        }
+      };
+      fr.readAsText(f,"utf-8");
+    };
+    $("#exportCsv").onclick=()=>{
+      const rows=[["日期","类型","金额","标签","小分类","账户","备注"]];
+      db.bills.forEach(b=>{
+        const asset=db.assets.find(a=>a.id===b.assetId)||{};
+        rows.push([
+          b.date,b.type==="income"?"收入":"支出",Number(b.amount).toFixed(2),
+          tagName(b.tagId),b.sub||"",asset.name||"",b.note||""
+        ]);
+      });
+      const csv="\uFEFF"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+      const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob); a.download="账单.csv"; a.click();
+      URL.revokeObjectURL(a.href);
+    };
+    $("#clearAll").onclick=()=>{
+      if(!confirm("确定清空全部数据？")) return;
+      const theme = db.theme;
+      const brand = db.brand;
+      db = seed(defaultData());
+      db.theme = theme;
+      db.brand = brand;
+      save(); render();
+    };
+
+    $("#btnAnalysis").onclick = openAnalysis;
+
+    // init
+    applyTheme();
+    $("#dateInput").value = today();
+    switchPage(db.ui.page || "record");
+    render();
+  </script>
+</body>
+</html>
